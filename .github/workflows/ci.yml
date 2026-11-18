@@ -28,7 +28,8 @@ jobs:
         run: ruff check .
 
       - name: 5. Executar testes automatizados
-        run: pytest
+        run: |
+          pytest --cov=login_seguro_with_orm --cov-report=term-missing
 
       - name: 5. Verificar sintaxe e importações
         run: |

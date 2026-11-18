@@ -22,7 +22,8 @@ def db_session():
     session = Session()
     yield session
     session.close()
-
+    engine.dispose()  # Fecha o engine e limpa as conexões remanescentes
+    
 def test_criar_usuario_e_hash_senha(db_session):
     # Teste básico direto no modelo e verificação de hash[cite: 3]
     senha_clara = "senha123"
