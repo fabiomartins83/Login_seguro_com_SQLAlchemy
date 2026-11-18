@@ -3,3 +3,4 @@ sqlalchemy
 pytest
 ruff
 pytest-cov
+bandit
