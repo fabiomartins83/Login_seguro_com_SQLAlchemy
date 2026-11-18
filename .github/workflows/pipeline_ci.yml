@@ -33,14 +33,14 @@ jobs:
           pip install -r requirements.txt
           pip install ruff pip-audit bandit
 
-      - name: 5. Auditar dependências por vulnerabilidades
-        run: pip-audit -r requirements.txt
+      - name: 5. Executar linting com Ruff
+        run: ruff check .
 
       - name: 6. Executar análise de segurança de código com Bandit
         run: bandit -r . -ll
 
-      - name: 7. Executar linting com Ruff
-        run: ruff check .
+      - name: 7. Auditar dependências por vulnerabilidades
+        run: pip-audit -r requirements.txt
 
       - name: 8. Executar testes automatizados
         run: |
