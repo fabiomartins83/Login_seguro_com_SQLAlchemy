@@ -24,7 +24,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 4. Executar testes automatizados
+      - name: 4. Executar linting com Ruff
+        run: ruff check .
+
+      - name: 5. Executar testes automatizados
         run: pytest
 
       - name: 5. Verificar sintaxe e importações
