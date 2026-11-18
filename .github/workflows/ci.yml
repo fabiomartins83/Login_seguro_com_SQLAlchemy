@@ -9,29 +9,45 @@ on:
 jobs:
   validar-codigo:
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.15"]
 
     steps:
       - name: 1. Baixar código do repositório
         uses: actions/checkout@v4
 
-      - name: 2. Instalar versão mais recente do Python
+      - name: 2. Instalar Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3'
+          python-version: ${{ matrix.python-version }}
 
-      - name: 3. Instalar dependências listadas em requirements.txt
+      - name: 3. Configurar Cache do Pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: 4. Instalar dependências e ferramentas (Ruff e pip-audit)
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install ruff pip-audit
 
-      - name: 4. Executar linting com Ruff
+      - name: 5. Auditar dependências por vulnerabilidades
+        run: pip-audit -r requirements.txt
+
+      - name: 6. Executar linting com Ruff
         run: ruff check .
 
-      - name: 5. Executar testes automatizados
+      - name: 7. Executar testes e verificar cobertura com pytest-cov
         run: |
           pytest --cov=login_seguro_with_orm --cov-report=term-missing
 
-      - name: 5. Verificar sintaxe e importações
+      - name: 8. Verificar sintaxe e importações
         run: |
           python -m py_compile login_seguro_with_orm.py
           python -c "import argon2, sqlalchemy; print('Dependencias instaladas com sucesso.')"
