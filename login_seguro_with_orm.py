@@ -1,22 +1,20 @@
 # !pip install argon2-cffi sqlalchemy
-import sqlite3
 import hashlib
-import logging
 import os
 import re
 import secrets
+import sqlite3
 import time
 import unicodedata
 from getpass import getpass
+
 # from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional, Tuple
 
+import sqlalchemy as sa
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-import sqlalchemy as sa
-import sqlalchemy.orm as orm
-
+from sqlalchemy import orm
 
 # ======================================================================
 # Configuração
@@ -120,7 +118,7 @@ SENHAS_COMUNS = {
 }
 _SEQUENCIAS = ("0123456789", "abcdefghijklmnopqrstuvwxyz", "qwertyuiopasdfghjklzxcvbnm")
 
-def motivo_senha_fraca(senha: str, nome: str) -> Optional[str]:
+def motivo_senha_fraca(senha: str, nome: str) -> str | None:
     """Política de senha, aplicada só no CADASTRO (espera texto já normalizado).
     Retorna o motivo da recusa ou None se a senha for aceitável."""
     minusculas = senha.casefold()
@@ -156,7 +154,6 @@ def configurar_log(caminho: Path = ARQUIVO_LOG, max_bytes: int = 1_000_000, back
     # )
     # Impede o SQLAlchemy de registrar comandos e parâmetros (nomes e hashes) no log
     # logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
-    pass
 
 # ======================================================================
 # Arquivos e pastas privados (Desativado)
@@ -262,7 +259,7 @@ def preparar_banco(engine: sa.engine.Engine) -> None:
                 # Exceção à política de senha: só o usuário de teste
                 cadastrar_usuario(sessao, "fabio", senha_teste, aplicar_politica=False)
 
-def buscar_usuario_ativo(sessao: orm.Session, nome: str) -> Optional[Usuario]:
+def buscar_usuario_ativo(sessao: orm.Session, nome: str) -> Usuario | None:
     """Retorna o usuário ativo com esse nome, ou None.
     O SQLAlchemy usa parâmetros vinculados (?), o que evita SQL injection."""
     return sessao.scalar(
@@ -287,7 +284,7 @@ def atualizar_hash_se_necessario(sessao: orm.Session, usuario: Usuario, senha: s
         usuario.senha_usuario = ph.hash(senha)
         sessao.commit()
 
-def autenticar(sessao: orm.Session, nome: str, senha: str) -> Optional[str]:
+def autenticar(sessao: orm.Session, nome: str, senha: str) -> str | None:
     """Retorna o nome do usuário se nome e senha conferirem, senão None.
     Sem registro (inexistente ou inativo), verifica contra o hash falso:
     tempo e mensagem de erro ficam iguais em todos os casos."""
@@ -299,7 +296,7 @@ def autenticar(sessao: orm.Session, nome: str, senha: str) -> Optional[str]:
     atualizar_hash_se_necessario(sessao, usuario, senha)
     return nome_usuario
 
-def tentar_login(sessao: orm.Session, usuario: str, senha: str) -> Optional[str]:
+def tentar_login(sessao: orm.Session, usuario: str, senha: str) -> str | None:
     """Valida o formato e autentica (espera usuário e senha já normalizados)."""
     # [Nota de Segurança - Item 2]: Se migrado para Web/API, insira aqui a verificação
     # de Rate Limiting (ex: checar Redis por IP/Usuário antes de prosseguir).
@@ -312,7 +309,7 @@ def tentar_login(sessao: orm.Session, usuario: str, senha: str) -> Optional[str]
 # Interface de terminal
 # ======================================================================
 
-def pedir_credenciais() -> Tuple[str, str]:
+def pedir_credenciais() -> tuple[str, str]:
     """Lê usuário e senha (a senha não aparece na tela) já normalizados."""
     usuario = normalizar_usuario(str(input("Usuário: ")))
     senha = normalizar_senha(str(getpass("Senha: ")))
@@ -323,7 +320,7 @@ def calcular_atraso(falhas: int) -> float:
     return min(ATRASO_BASE * 2 ** (falhas - 1), ATRASO_MAX)
 
 def executar_login(sessao: orm.Session, max_tentativas: int = MAX_TENTATIVAS,
-                    pedir=pedir_credenciais, esperar=None) -> Optional[str]:
+                    pedir=pedir_credenciais, esperar=None) -> str | None:
     """Repete o login até acertar ou esgotar as tentativas, com atraso crescente
     entre as falhas (esperar: função de espera; por padrão, time.sleep).
     Retorna o nome do usuário ou None."""

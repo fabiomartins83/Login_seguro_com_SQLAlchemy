@@ -1,11 +1,18 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from login_seguro_with_orm import (
-    Base, Usuario, ph, verificar_senha, 
-    cadastrar_usuario, normalizar_usuario, 
-    buscar_usuario_ativo, autenticar
+    Base,
+    Usuario,
+    autenticar,
+    buscar_usuario_ativo,
+    cadastrar_usuario,
+    normalizar_usuario,
+    ph,
+    verificar_senha,
 )
+
 
 @pytest.fixture
 def db_session():
