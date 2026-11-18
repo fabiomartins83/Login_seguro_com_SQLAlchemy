@@ -343,10 +343,7 @@ def executar_login(sessao: orm.Session, max_tentativas: int = MAX_TENTATIVAS,
         if numero < max_tentativas:  # após a última falha o programa encerra, sem espera
             atraso = calcular_atraso(numero)
             print(f"Aguarde {atraso:.0f} s antes de tentar novamente.")
-            try:
-                esperar(atraso)
-            except (KeyboardInterrupt, SystemExit):
-                raise
+            esperar(atraso)
 
     # logging.warning("Limite de %d tentativas atingido", max_tentativas)
     print("Número máximo de tentativas atingido. Encerrando.")
