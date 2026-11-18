@@ -1,7 +1,11 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from login_seguro_with_orm import Base, Usuario, ph, verificar_senha, cadastrar_usuario
+from login_seguro_with_orm import (
+    Base, Usuario, ph, verificar_senha, 
+    cadastrar_usuario, normalizar_usuario, 
+    buscar_usuario_ativo, autenticar
+)
 
 @pytest.fixture
 def db_session():
@@ -58,3 +62,40 @@ def test_cadastrar_usuario_duplicado(db_session):
     # Tenta cadastrar o mesmo nome de usuário novamente (deve retornar False por duplicidade)
     resultado = cadastrar_usuario(db_session, "FABIO_TESTE", "OutraSenhaForte456!", aplicar_politica=True)
     assert resultado is False
+
+def test_normalizacao_e_case_insensitive_usuario(db_session):
+    # Cadastra um usuário com letras maiúsculas e espaços (que serão normalizados)
+    sucesso = cadastrar_usuario(db_session, "  FABIO.MARTINS  ", "SenhaForte123!", aplicar_politica=True)
+    assert sucesso is True
+
+    # Tenta buscar ou autenticar variando o case ou adicionando espaços (deve encontrar)
+    usuario_encontrado = buscar_usuario_ativo(db_session, normalizar_usuario("fabio.martins"))
+    assert usuario_encontrado is not None
+    assert usuario_encontrado.nome_usuario == "fabio.martins"
+
+def test_cadastrar_usuario_formato_invalido(db_session):
+    # Testa caracteres proibidos no nome de usuário (ex: espaços no meio, @, símbolos)
+    with pytest.raises(ValueError, match="Usuário ou senha fora do formato"):
+        cadastrar_usuario(db_session, "usuario inválido", "SenhaForte123!", aplicar_politica=True)
+
+    with pytest.raises(ValueError, match="Usuário ou senha fora do formato"):
+        cadastrar_usuario(db_session, "usuario@teste", "SenhaForte123!", aplicar_politica=True)
+
+def test_autenticar_sucesso_e_falha(db_session):
+    # Cadastra um usuário válido
+    cadastrar_usuario(db_session, "operador", "SenhaForte123!", aplicar_politica=True)
+
+    # 1. Autenticação com credenciais corretas deve retornar o nome do usuário
+    nome_autenticado = autenticar(db_session, "operador", "SenhaForte123!")
+    assert nome_autenticado == "operador"
+
+    # 2. Senha incorreta deve retornar None
+    resultado_senha_errada = autenticar(db_session, "operador", "SenhaErrada999!")
+    assert resultado_senha_errada is None
+
+def test_tentativa_login_usuario_inexistente(db_session):
+    # Tenta autenticar um usuário que não existe no banco.
+    # O sistema deve rodar o fluxo com o HASH_FALSO e retornar None com segurança,
+    # mantendo o tempo de resposta consistente (proteção contra timing attacks).
+    resultado = autenticar(db_session, "usuario_fantasma", "QualquerSenha123!")
+    assert resultado is None
